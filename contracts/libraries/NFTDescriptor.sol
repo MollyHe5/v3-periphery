@@ -217,12 +217,14 @@ library NFTDescriptor {
         }
 
         // add leading/trailing 0's
-        for (uint256 zerosCursor = params.zerosStartIndex; zerosCursor < params.zerosEndIndex.add(1); zerosCursor++) {
+        uint8 zerosEndIndex = params.zerosEndIndex;
+        for (uint256 zerosCursor = params.zerosStartIndex; zerosCursor < zerosEndIndex.add(1); zerosCursor++) {
             buffer[zerosCursor] = bytes1(uint8(48));
         }
         // add sigfigs
+        uint8 decimalIndex = params.decimalIndex;
         while (params.sigfigs > 0) {
-            if (params.decimalIndex > 0 && params.sigfigIndex == params.decimalIndex) {
+            if (decimalIndex > 0 && params.sigfigIndex == decimalIndex) {
                 buffer[params.sigfigIndex--] = '.';
             }
             buffer[params.sigfigIndex--] = bytes1(uint8(uint256(48).add(params.sigfigs % 10)));

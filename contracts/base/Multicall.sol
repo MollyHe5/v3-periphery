@@ -9,10 +9,11 @@ import '../interfaces/IMulticall.sol';
 abstract contract Multicall is IMulticall {
     /// @inheritdoc IMulticall
     function multicall(bytes[] calldata data) public payable override returns (bytes[] memory results) {
-        results = new bytes[](data.length);
+        uint256 len = data.length;
+        results = new bytes[](len);
         bool success; 
         bytes memory result;
-        for (uint256 i = 0; i < data.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             (success, result) = address(this).delegatecall(data[i]);
 
             if (!success) {
