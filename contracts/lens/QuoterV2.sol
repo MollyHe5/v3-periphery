@@ -120,7 +120,7 @@ contract QuoterV2 is IQuoterV2, IUniswapV3SwapCallback, PeripheryImmutableState 
         return (amount, sqrtPriceX96After, initializedTicksCrossed, gasEstimate);
     }
 
-    function quoteExactInputSingle(QuoteExactInputSingleParams calldata params)
+    function quoteExactInputSingle(QuoteExactInputSingleParams memory params)
         public
         override
         returns (
@@ -194,7 +194,7 @@ contract QuoterV2 is IQuoterV2, IUniswapV3SwapCallback, PeripheryImmutableState 
         }
     }
 
-    function quoteExactOutputSingle(QuoteExactOutputSingleParams calldata params)
+    function quoteExactOutputSingle(QuoteExactOutputSingleParams memory params)
         public
         override
         returns (
