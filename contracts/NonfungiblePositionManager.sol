@@ -332,10 +332,9 @@ contract NonfungiblePositionManager is
         (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
         int24 tickLower = position.tickLower;
         int24 tickUpper = position.tickUpper;
-        uint128 liquidity = position.liquidity;
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
-        if (liquidity > 0) {
+        if (position.liquidity > 0) {
             pool.burn(tickLower, tickUpper, 0);
             (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) =
                 pool.positions(PositionKey.compute(address(this), tickLower, tickUpper));
@@ -343,14 +342,14 @@ contract NonfungiblePositionManager is
             tokensOwed0 += uint128(
                 FullMath.mulDiv(
                     feeGrowthInside0LastX128 - position.feeGrowthInside0LastX128,
-                    liquidity,
+                    position.liquidity,
                     FixedPoint128.Q128
                 )
             );
             tokensOwed1 += uint128(
                 FullMath.mulDiv(
                     feeGrowthInside1LastX128 - position.feeGrowthInside1LastX128,
-                    liquidity,
+                    position.liquidity,
                     FixedPoint128.Q128
                 )
             );
