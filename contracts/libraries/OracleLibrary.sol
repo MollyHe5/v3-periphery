@@ -90,7 +90,7 @@ library OracleLibrary {
     /// @notice Given a pool, it returns the tick value as of the start of the current block
     /// @param pool Address of Uniswap V3 pool
     /// @return The tick that the pool was in at the start of the current block
-    function getBlockStartingTickAndLiquidity(address pool) internal view returns (int24, uint128) {
+    function getBlockStartingTickAndLiquidity(address pool) internal view returns (int24, uint128 liquidity) {
         (, int24 tick, uint16 observationIndex, uint16 observationCardinality, , , ) = IUniswapV3Pool(pool).slot0();
 
         // 2 observations are needed to reliably calculate the block starting tick
@@ -117,7 +117,7 @@ library OracleLibrary {
 
         uint32 delta = observationTimestamp - prevObservationTimestamp;
         tick = int24((tickCumulative - prevTickCumulative) / delta);
-        uint128 liquidity =
+        liquidity =
             uint128(
                 (uint192(delta) * type(uint160).max) /
                     (uint192(secondsPerLiquidityCumulativeX128 - prevSecondsPerLiquidityCumulativeX128) << 32)
@@ -147,9 +147,10 @@ library OracleLibrary {
 
         // Accumulates the sum of the weights
         uint256 denominator;
+        uint256 len = weightedTickData.length;
 
         // Products fit in 152 bits, so it would take an array of length ~2**104 to overflow this logic
-        for (uint256 i; i < weightedTickData.length; i++) {
+        for (uint256 i; i < len; i++) {
             numerator += weightedTickData[i].tick * int256(weightedTickData[i].weight);
             denominator += weightedTickData[i].weight;
         }
@@ -170,8 +171,9 @@ library OracleLibrary {
         pure
         returns (int256 syntheticTick)
     {
-        require(tokens.length - 1 == ticks.length, 'DL');
-        for (uint256 i = 1; i <= ticks.length; i++) {
+        uint256 len = ticks.length;
+        require(tokens.length - 1 == len, 'DL');
+        for (uint256 i = 1; i <= len; i++) {
             // check the tokens for address sort order, then accumulate the
             // ticks into the running synthetic tick, ensuring that intermediate tokens "cancel out"
             tokens[i - 1] < tokens[i] ? syntheticTick += ticks[i - 1] : syntheticTick -= ticks[i - 1];

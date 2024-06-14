@@ -85,15 +85,16 @@ library NFTDescriptor {
     function escapeQuotes(string memory symbol) internal pure returns (string memory) {
         bytes memory symbolBytes = bytes(symbol);
         uint8 quotesCount = 0;
-        for (uint8 i = 0; i < symbolBytes.length; i++) {
+        uint256 len = symbolBytes.length;
+        for (uint8 i = 0; i < len; i++) {
             if (symbolBytes[i] == '"') {
                 quotesCount++;
             }
         }
         if (quotesCount > 0) {
-            bytes memory escapedBytes = new bytes(symbolBytes.length + (quotesCount));
+            bytes memory escapedBytes = new bytes(len + (quotesCount));
             uint256 index;
-            for (uint8 i = 0; i < symbolBytes.length; i++) {
+            for (uint8 i = 0; i < len; i++) {
                 if (symbolBytes[i] == '"') {
                     escapedBytes[index++] = '\\';
                 }
@@ -216,13 +217,17 @@ library NFTDescriptor {
         }
 
         // add leading/trailing 0's
-        for (uint256 zerosCursor = params.zerosStartIndex; zerosCursor < params.zerosEndIndex.add(1); zerosCursor++) {
+        uint256 zerosEndIndex = params.zerosEndIndex;
+        for (uint256 zerosCursor = params.zerosStartIndex; zerosCursor < zerosEndIndex.add(1); zerosCursor++) {
             buffer[zerosCursor] = bytes1(uint8(48));
         }
         // add sigfigs
+        uint256 decimalIndex = params.decimalIndex;
         while (params.sigfigs > 0) {
-            if (params.decimalIndex > 0 && params.sigfigIndex == params.decimalIndex) {
-                buffer[params.sigfigIndex--] = '.';
+            if (decimalIndex > 0) {
+                if (params.sigfigIndex == decimalIndex) {
+                    buffer[params.sigfigIndex--] = '.';
+                }
             }
             buffer[params.sigfigIndex--] = bytes1(uint8(uint256(48).add(params.sigfigs % 10)));
             params.sigfigs /= 10;
@@ -250,8 +255,7 @@ library NFTDescriptor {
         }
     }
 
-    function sigfigsRounded(uint256 value, uint8 digits) private pure returns (uint256, bool) {
-        bool extraDigit;
+    function sigfigsRounded(uint256 value, uint8 digits) private pure returns (uint256, bool extraDigit) {
         if (digits > 5) {
             value = value.div((10**(digits - 5)));
         }

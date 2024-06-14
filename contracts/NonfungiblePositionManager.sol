@@ -210,14 +210,18 @@ contract NonfungiblePositionManager is
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
 
+        int24 tickLower = position.tickLower;
+        int24 tickUpper = position.tickUpper;
+        uint128 liquidityBefore = position.liquidity;
+
         IUniswapV3Pool pool;
         (liquidity, amount0, amount1, pool) = addLiquidity(
             AddLiquidityParams({
                 token0: poolKey.token0,
                 token1: poolKey.token1,
                 fee: poolKey.fee,
-                tickLower: position.tickLower,
-                tickUpper: position.tickUpper,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
                 amount0Desired: params.amount0Desired,
                 amount1Desired: params.amount1Desired,
                 amount0Min: params.amount0Min,
@@ -226,7 +230,7 @@ contract NonfungiblePositionManager is
             })
         );
 
-        bytes32 positionKey = PositionKey.compute(address(this), position.tickLower, position.tickUpper);
+        bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
 
         // this is now updated to the current transaction
         (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) = pool.positions(positionKey);
@@ -234,21 +238,21 @@ contract NonfungiblePositionManager is
         position.tokensOwed0 += uint128(
             FullMath.mulDiv(
                 feeGrowthInside0LastX128 - position.feeGrowthInside0LastX128,
-                position.liquidity,
+                liquidityBefore,
                 FixedPoint128.Q128
             )
         );
         position.tokensOwed1 += uint128(
             FullMath.mulDiv(
                 feeGrowthInside1LastX128 - position.feeGrowthInside1LastX128,
-                position.liquidity,
+                liquidityBefore,
                 FixedPoint128.Q128
             )
         );
 
         position.feeGrowthInside0LastX128 = feeGrowthInside0LastX128;
         position.feeGrowthInside1LastX128 = feeGrowthInside1LastX128;
-        position.liquidity += liquidity;
+        position.liquidity = liquidityBefore + liquidity;
 
         emit IncreaseLiquidity(params.tokenId, liquidity, amount0, amount1);
     }
@@ -267,14 +271,16 @@ contract NonfungiblePositionManager is
 
         uint128 positionLiquidity = position.liquidity;
         require(positionLiquidity >= params.liquidity);
+        int24 tickLower = position.tickLower;
+        int24 tickUpper = position.tickUpper;
 
         PoolAddress.PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
         IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
-        (amount0, amount1) = pool.burn(position.tickLower, position.tickUpper, params.liquidity);
+        (amount0, amount1) = pool.burn(tickLower, tickUpper, params.liquidity);
 
         require(amount0 >= params.amount0Min && amount1 >= params.amount1Min, 'Price slippage check');
 
-        bytes32 positionKey = PositionKey.compute(address(this), position.tickLower, position.tickUpper);
+        bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
         // this is now updated to the current transaction
         (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) = pool.positions(positionKey);
 
@@ -324,12 +330,14 @@ contract NonfungiblePositionManager is
         IUniswapV3Pool pool = IUniswapV3Pool(PoolAddress.computeAddress(factory, poolKey));
 
         (uint128 tokensOwed0, uint128 tokensOwed1) = (position.tokensOwed0, position.tokensOwed1);
+        int24 tickLower = position.tickLower;
+        int24 tickUpper = position.tickUpper;
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
         if (position.liquidity > 0) {
-            pool.burn(position.tickLower, position.tickUpper, 0);
+            pool.burn(tickLower, tickUpper, 0);
             (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, , ) =
-                pool.positions(PositionKey.compute(address(this), position.tickLower, position.tickUpper));
+                pool.positions(PositionKey.compute(address(this), tickLower, tickUpper));
 
             tokensOwed0 += uint128(
                 FullMath.mulDiv(
@@ -360,8 +368,8 @@ contract NonfungiblePositionManager is
         // the actual amounts collected are returned
         (amount0, amount1) = pool.collect(
             recipient,
-            position.tickLower,
-            position.tickUpper,
+            tickLower,
+            tickUpper,
             amount0Collect,
             amount1Collect
         );

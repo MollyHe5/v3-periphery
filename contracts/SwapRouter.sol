@@ -138,13 +138,15 @@ contract SwapRouter is
     {
         address payer = msg.sender; // msg.sender pays for the first hop
 
+        bool hasMultiplePools;
+        address recipient = params.recipient;
         while (true) {
-            bool hasMultiplePools = params.path.hasMultiplePools();
+            hasMultiplePools = params.path.hasMultiplePools();
 
             // the outputs of prior swaps become the inputs to subsequent ones
             params.amountIn = exactInputInternal(
                 params.amountIn,
-                hasMultiplePools ? address(this) : params.recipient, // for intermediate swaps, this contract custodies
+                hasMultiplePools ? address(this) : recipient, // for intermediate swaps, this contract custodies
                 0,
                 SwapCallbackData({
                     path: params.path.getFirstPool(), // only the first pool in the path is necessary

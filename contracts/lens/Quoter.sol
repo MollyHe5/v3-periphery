@@ -38,7 +38,7 @@ contract Quoter is IQuoter, IUniswapV3SwapCallback, PeripheryImmutableState {
     function uniswapV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
-        bytes memory path
+        bytes calldata path
     ) external view override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         (address tokenIn, address tokenOut, uint24 fee) = path.decodeFirstPool();
@@ -56,7 +56,8 @@ contract Quoter is IQuoter, IUniswapV3SwapCallback, PeripheryImmutableState {
             }
         } else {
             // if the cache has been populated, ensure that the full output amount has been received
-            if (amountOutCached != 0) require(amountReceived == amountOutCached);
+            uint256 amountOutCached_local = amountOutCached;
+            if (amountOutCached_local != 0) require(amountReceived == amountOutCached_local);
             assembly {
                 let ptr := mload(0x40)
                 mstore(ptr, amountToPay)
@@ -104,10 +105,14 @@ contract Quoter is IQuoter, IUniswapV3SwapCallback, PeripheryImmutableState {
 
     /// @inheritdoc IQuoter
     function quoteExactInput(bytes memory path, uint256 amountIn) external override returns (uint256 amountOut) {
+        bool hasMultiplePools;
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
         while (true) {
-            bool hasMultiplePools = path.hasMultiplePools();
+            hasMultiplePools = path.hasMultiplePools();
 
-            (address tokenIn, address tokenOut, uint24 fee) = path.decodeFirstPool();
+            (tokenIn, tokenOut, fee) = path.decodeFirstPool();
 
             // the outputs of prior swaps become the inputs to subsequent ones
             amountIn = quoteExactInputSingle(tokenIn, tokenOut, fee, amountIn, 0);
@@ -151,10 +156,14 @@ contract Quoter is IQuoter, IUniswapV3SwapCallback, PeripheryImmutableState {
 
     /// @inheritdoc IQuoter
     function quoteExactOutput(bytes memory path, uint256 amountOut) external override returns (uint256 amountIn) {
+        bool hasMultiplePools;
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
         while (true) {
-            bool hasMultiplePools = path.hasMultiplePools();
+            hasMultiplePools = path.hasMultiplePools();
 
-            (address tokenOut, address tokenIn, uint24 fee) = path.decodeFirstPool();
+            (tokenOut, tokenIn, fee) = path.decodeFirstPool();
 
             // the inputs of prior swaps become the outputs of subsequent ones
             amountOut = quoteExactOutputSingle(tokenIn, tokenOut, fee, amountOut, 0);

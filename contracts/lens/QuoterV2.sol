@@ -41,7 +41,7 @@ contract QuoterV2 is IQuoterV2, IUniswapV3SwapCallback, PeripheryImmutableState 
     function uniswapV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
-        bytes memory path
+        bytes calldata path
     ) external view override {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
         (address tokenIn, address tokenOut, uint24 fee) = path.decodeFirstPool();
@@ -65,7 +65,8 @@ contract QuoterV2 is IQuoterV2, IUniswapV3SwapCallback, PeripheryImmutableState 
             }
         } else {
             // if the cache has been populated, ensure that the full output amount has been received
-            if (amountOutCached != 0) require(amountReceived == amountOutCached);
+            uint256 amountOutCached_local = amountOutCached;
+            if (amountOutCached_local != 0) require(amountReceived == amountOutCached_local);
             assembly {
                 let ptr := mload(0x40)
                 mstore(ptr, amountToPay)
@@ -164,11 +165,18 @@ contract QuoterV2 is IQuoterV2, IUniswapV3SwapCallback, PeripheryImmutableState 
         initializedTicksCrossedList = new uint32[](path.numPools());
 
         uint256 i = 0;
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+        uint256 _amountOut;
+        uint160 _sqrtPriceX96After;
+        uint32 _initializedTicksCrossed;
+        uint256 _gasEstimate;
         while (true) {
-            (address tokenIn, address tokenOut, uint24 fee) = path.decodeFirstPool();
+            (tokenIn, tokenOut, fee) = path.decodeFirstPool();
 
             // the outputs of prior swaps become the inputs to subsequent ones
-            (uint256 _amountOut, uint160 _sqrtPriceX96After, uint32 _initializedTicksCrossed, uint256 _gasEstimate) =
+            (_amountOut, _sqrtPriceX96After, _initializedTicksCrossed, _gasEstimate) =
                 quoteExactInputSingle(
                     QuoteExactInputSingleParams({
                         tokenIn: tokenIn,
