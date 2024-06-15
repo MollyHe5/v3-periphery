@@ -224,10 +224,8 @@ library NFTDescriptor {
         // add sigfigs
         uint256 decimalIndex = params.decimalIndex;
         while (params.sigfigs > 0) {
-            if (decimalIndex > 0) {
-                if (params.sigfigIndex == decimalIndex) {
-                    buffer[params.sigfigIndex--] = '.';
-                }
+            if (params.decimalIndex > 0 && params.sigfigIndex == params.decimalIndex) {
+                buffer[params.sigfigIndex--] = '.';
             }
             buffer[params.sigfigIndex--] = bytes1(uint8(uint256(48).add(params.sigfigs % 10)));
             params.sigfigs /= 10;
@@ -255,7 +253,8 @@ library NFTDescriptor {
         }
     }
 
-    function sigfigsRounded(uint256 value, uint8 digits) private pure returns (uint256, bool extraDigit) {
+    function sigfigsRounded(uint256 value, uint8 digits) private pure returns (uint256, bool) {
+        bool extraDigit;
         if (digits > 5) {
             value = value.div((10**(digits - 5)));
         }
